@@ -3,6 +3,34 @@
     "tasks": [
         {
             "type": "cppbuild",
+            "label": "C/C++: clang.exe build active file",
+            "command": "clang",
+            "args": [
+                "${file}",
+                "-fcolor-diagnostics",
+                "-fansi-escape-codes",
+                "-g",
+                "-Wall",
+                "-O0",
+                "-o",
+                "${fileDirname}/bin/${fileBasenameNoExtension}",
+                "-lm",
+                "-fsanitize=address"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "compiler: clang"
+        },
+        {
+            "type": "cppbuild",
             "label": "C/C++: clang++.exe build active file",
             "command": "clang++",
             "args": [
@@ -13,7 +41,9 @@
                 "-Wall",
                 "-O0",
                 "-o",
-                "${fileDirname}/bin/${fileBasenameNoExtension}"
+                "${fileDirname}/bin/${fileBasenameNoExtension}",
+                "-lm",
+                "-fsanitize=address"
             ],
             "options": {
                 "cwd": "${fileDirname}"
