@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <assert.h>
 
 int max(int x, int y) { return x < y ? y : x; }
 
@@ -29,7 +30,10 @@ int cmp2(const void *a, const void *b)
     time *b2 = (time *)b;
     int ta = a2->is_begin ? x[a2->task_idx].begin : x[a2->task_idx].end;
     int tb = b2->is_begin ? x[b2->task_idx].begin : x[b2->task_idx].end;
-    return ta - tb;
+    int det = ta - tb;
+    if (!det)
+        det = a2->task_idx - b2->task_idx;
+    return det;
 }
 void init_prev()
 {
@@ -45,7 +49,7 @@ void init_prev()
     }
     qsort(times, 2 * n, sizeof(time), cmp2);
     int prev = -1;
-    for (int i = 1; i < 2 * n; i++)
+    for (int i = 0; i < 2 * n; i++)
     {
         if (times[i].is_begin)
             x[times[i].task_idx].prev = prev;
@@ -58,9 +62,6 @@ int cache[100000];
 int solve(int k);
 int solve_impl(int k)
 {
-    // int p = k - 1;
-    // while (!(x[p].end <= x[k].begin))
-    //     --p;
     return max(solve(x[k].prev) + x[k].weight, solve(k - 1));
 }
 int solve(int k)
