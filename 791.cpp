@@ -1,9 +1,16 @@
 #include <stdio.h>
 #include <assert.h>
+#include <limits>
+#include <algorithm>
 
 #define unlikely(x) __builtin_expect(x, 0)
-
-// int perf_counter;
+typedef long long int int64;
+int64 dist(int x0, int y0, int x1, int y1)
+{
+    int64 dx = x0 - x1;
+    int64 dy = y0 - y1;
+    return dx * dx + dy * dy;
+}
 
 class quad;
 quad *memory_alloc();
@@ -15,18 +22,61 @@ private:
     quad *child[2][2]; // child[i][j] := quad(r-1, 2x+i, 2y+j)
     int n;
 
+    int x_min() const { return x; }
+    int x_max() const { return x + (1 << r) - 1; }
+    int y_min() const { return y; }
+    int y_max() const { return y + (1 << r) - 1; }
+
     unsigned int x_pos(int idx) const
     {
-        // assert(r > 0);
-        // assert(0 <= idx && idx < 3);
+        assert(r > 0);
+        assert(0 <= idx && idx < 3);
         return (2 * x + idx) << (r - 1);
     }
 
     unsigned int y_pos(int idx) const
     {
-        // assert(r > 0);
-        // assert(0 <= idx && idx < 3);
+        assert(r > 0);
+        assert(0 <= idx && idx < 3);
         return (2 * y + idx) << (r - 1);
+    }
+
+    // struct square3x3
+    // {
+    //     const quad *q[3][3];
+
+    //     square3x3()
+    //     {
+    //         for (int i = 0; i < 3; i++)
+    //             for (int j = 0; j < 3; j++)
+    //                 q[i][j] = nullptr;
+    //     }
+
+    //     square3x3 narrow(int i, int j)
+    //     {
+    //         assert(0 <= i && i < 2 && 0 <= j && j < 2);
+    //         square3x3 ret;
+    //         for (int ii = 0; ii < 3; ii++)
+    //             for (int jj = 0; jj < 3; jj++)
+    //                 ret.q[ii][jj] = q[(i + ii + 1) / 2][(j + jj + 1) / 2]->child[(i + ii) % 2][(j + jj) % 2];
+    //         return ret;
+    //     }
+
+    //     int64 mindist(int x0, int y0) const
+    //     {
+    //         //
+    //     }
+    // };
+
+    int64 lower_bound(int x0, int y0) const
+    {
+        if (x_min() <= x0 && x0 <= x_max() && y_min() <= y0 && y0 <= y_max())
+            return 0;
+        int64 d1 = dist(x_min(), y_min(), x0, y0);
+        int64 d2 = dist(x_max(), y_min(), x0, y0);
+        int64 d3 = dist(x_min(), y_max(), x0, y0);
+        int64 d4 = dist(x_max(), y_max(), x0, y0);
+        return std::min({d1, d2, d3, d4});
     }
 
 public:
@@ -36,23 +86,6 @@ public:
         for (int i = 0; i < 2; i++)
             for (int j = 0; j < 2; j++)
                 child[i][j] = nullptr;
-    }
-
-    int count(int x0, int x1, int y0, int y1) const
-    {
-        // ++perf_counter;
-        if (r == 0)
-            return (x0 <= x && x <= x1 && y0 <= y && y <= y1) ? n : 0;
-        if (x0 <= x_pos(0) && x1 >= x_pos(2) - 1 && y0 <= y_pos(0) && y1 >= y_pos(2) - 1)
-            return n;
-        int total = 0;
-        for (int i = 0; i < 2; i++)
-            for (int j = 0; j < 2; j++)
-                if (child[i][j])
-                    if (x0 < x_pos(i + 1) && x1 >= x_pos(i) && y0 < y_pos(j + 1) && y1 >= y_pos(j))
-                        total += child[i][j]->count(x0, x1, y0, y1);
-        // fprintf(stderr, "quad(%d, %d, %d): %d\n", r, x, y, total);
-        return total;
     }
 
     void insert(int x0, int y0)
@@ -71,6 +104,25 @@ public:
             }
             child[i][j]->insert(x0, y0);
         }
+    }
+
+    // int64 mindist(int x0, int y0) const
+    // {
+    //     square3x3 s;
+    //     s.q[1][1] = this;
+    //     return s.mindist(x0, y0);
+    // }
+
+    void min_dist(int x0, int y0, int64 &min_dist) const
+    {
+        if (r == 0)
+            min_dist = std::min(min_dist, dist(x, y, x0, y0));
+        else if (lower_bound(x0, y0) < min_dist)
+            for (int i = 0; i < 2; i++)
+                for (int j = 0; j < 2; j++)
+                    if (child[i][j])
+                        child[i][j]->min_dist(x0, y0, min_dist);
+        fprintf(stderr, "[%d, %d][%d, %d]: %lld\n", x_min(), x_max(), y_min(), y_max(), min_dist);
     }
 };
 
@@ -92,11 +144,11 @@ int main()
     scanf("%d", &q);
     for (int i = 0; i < q; i++)
     {
-        int x0, x1, y0, y1;
-        scanf("%d%d%d%d", &x0, &x1, &y0, &y1);
-        // perf_counter = 0;
-        printf("%d\n", qtree.count(x0, x1, y0, y1));
-        // fprintf(stderr, "perf counter: %d\n", perf_counter);
+        int x0, y0;
+        scanf("%d%d", &x0, &y0);
+        int64 min_dist = std::numeric_limits<int64>::max();
+        qtree.min_dist(x0, y0, min_dist);
+        printf("%lld\n", min_dist);
     }
     return 0;
 }
