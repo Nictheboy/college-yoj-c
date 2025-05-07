@@ -3,12 +3,14 @@
 #include <limits>
 #include <algorithm>
 
-#define unlikely(x) __builtin_expect(x, 0)
-typedef long long int int64;
-int64 dist(int x0, int y0, int x1, int y1)
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#define int long long
+int square(int x) { return x * x; }
+int dist(int x0, int y0, int x1, int y1)
 {
-    int64 dx = x0 - x1;
-    int64 dy = y0 - y1;
+    int dx = x0 - x1;
+    int dy = y0 - y1;
     return dx * dx + dy * dy;
 }
 
@@ -22,61 +24,18 @@ private:
     quad *child[2][2]; // child[i][j] := quad(r-1, 2x+i, 2y+j)
     int n;
 
-    int x_min() const { return x; }
-    int x_max() const { return x + (1 << r) - 1; }
-    int y_min() const { return y; }
-    int y_max() const { return y + (1 << r) - 1; }
-
-    unsigned int x_pos(int idx) const
+    int x_pos(int idx) const
     {
-        assert(r > 0);
-        assert(0 <= idx && idx < 3);
+        // assert(r > 0);
+        // assert(0 <= idx && idx < 3);
         return (2 * x + idx) << (r - 1);
     }
 
-    unsigned int y_pos(int idx) const
+    int y_pos(int idx) const
     {
-        assert(r > 0);
-        assert(0 <= idx && idx < 3);
+        // assert(r > 0);
+        // assert(0 <= idx && idx < 3);
         return (2 * y + idx) << (r - 1);
-    }
-
-    // struct square3x3
-    // {
-    //     const quad *q[3][3];
-
-    //     square3x3()
-    //     {
-    //         for (int i = 0; i < 3; i++)
-    //             for (int j = 0; j < 3; j++)
-    //                 q[i][j] = nullptr;
-    //     }
-
-    //     square3x3 narrow(int i, int j)
-    //     {
-    //         assert(0 <= i && i < 2 && 0 <= j && j < 2);
-    //         square3x3 ret;
-    //         for (int ii = 0; ii < 3; ii++)
-    //             for (int jj = 0; jj < 3; jj++)
-    //                 ret.q[ii][jj] = q[(i + ii + 1) / 2][(j + jj + 1) / 2]->child[(i + ii) % 2][(j + jj) % 2];
-    //         return ret;
-    //     }
-
-    //     int64 mindist(int x0, int y0) const
-    //     {
-    //         //
-    //     }
-    // };
-
-    int64 lower_bound(int x0, int y0) const
-    {
-        if (x_min() <= x0 && x0 <= x_max() && y_min() <= y0 && y0 <= y_max())
-            return 0;
-        int64 d1 = dist(x_min(), y_min(), x0, y0);
-        int64 d2 = dist(x_max(), y_min(), x0, y0);
-        int64 d3 = dist(x_min(), y_max(), x0, y0);
-        int64 d4 = dist(x_max(), y_max(), x0, y0);
-        return std::min({d1, d2, d3, d4});
     }
 
 public:
@@ -92,10 +51,11 @@ public:
     {
         n += 1;
         if (unlikely(r == 0))
-            assert(x0 == x && y0 == y);
+            // assert(x0 == x && y0 == y);
+            ;
         else
         {
-            assert(x_pos(0) <= x0 && x0 < x_pos(2) && y_pos(0) <= y0 && y0 < y_pos(2));
+            // assert(x_pos(0) <= x0 && x0 < x_pos(2) && y_pos(0) <= y0 && y0 < y_pos(2));
             int i = x0 >= x_pos(1), j = y0 >= y_pos(1);
             if (!child[i][j])
             {
@@ -106,47 +66,54 @@ public:
         }
     }
 
-    // int64 mindist(int x0, int y0) const
-    // {
-    //     square3x3 s;
-    //     s.q[1][1] = this;
-    //     return s.mindist(x0, y0);
-    // }
-
-    void min_dist(int x0, int y0, int64 &min_dist) const
+    void min_dist(int x0, int y0, int &min_dist) const
     {
-        if (r == 0)
+        if (likely(r == 0))
             min_dist = std::min(min_dist, dist(x, y, x0, y0));
-        else if (lower_bound(x0, y0) < min_dist)
+        else
+        {
+            int lower_bound[2][2], dx2[2], dy2[2];
+            for (int i = 0; i < 2; i++)
+                dx2[i] = square(std::max({0ll, x_pos(i) - x0, x0 - (x_pos(i + 1) - 1)}));
+            for (int i = 0; i < 2; i++)
+                dy2[i] = square(std::max({0ll, y_pos(i) - y0, y0 - (y_pos(i + 1) - 1)}));
             for (int i = 0; i < 2; i++)
                 for (int j = 0; j < 2; j++)
-                    if (child[i][j])
-                        child[i][j]->min_dist(x0, y0, min_dist);
-        fprintf(stderr, "[%d, %d][%d, %d]: %lld\n", x_min(), x_max(), y_min(), y_max(), min_dist);
+                    lower_bound[i][j] = dx2[i] + dy2[j];
+            int i0 = x0 >= x_pos(1), j0 = y0 >= y_pos(1);
+            if (child[i0][j0])
+                if (lower_bound[i0][j0] < min_dist)
+                    child[i0][j0]->min_dist(x0, y0, min_dist);
+            for (int i = 0; i < 2; i++)
+                for (int j = 0; j < 2; j++)
+                    if (!(i == i0 && j == j0) && child[i][j])
+                        if (lower_bound[i][j] < min_dist)
+                            child[i][j]->min_dist(x0, y0, min_dist);
+        }
     }
 };
 
-quad memory[200 * 1024 * 1024 / sizeof(quad)], *next = memory;
+quad memory[256 * 1024 * 1024 / sizeof(quad)], *next = memory;
 quad *memory_alloc() { return next++; }
 
-int main()
+signed main()
 {
     int n;
     quad qtree(31, 0, 0);
-    scanf("%d", &n);
+    scanf("%lld", &n);
     for (int i = 0; i < n; i++)
     {
         int x, y;
-        scanf("%d%d", &x, &y);
+        scanf("%lld%lld", &x, &y);
         qtree.insert(x, y);
     }
     int q;
-    scanf("%d", &q);
+    scanf("%lld", &q);
     for (int i = 0; i < q; i++)
     {
         int x0, y0;
-        scanf("%d%d", &x0, &y0);
-        int64 min_dist = std::numeric_limits<int64>::max();
+        scanf("%lld%lld", &x0, &y0);
+        int min_dist = std::numeric_limits<int>::max();
         qtree.min_dist(x0, y0, min_dist);
         printf("%lld\n", min_dist);
     }
